@@ -15,6 +15,7 @@ window.ghostCells = [{
 	'size': 0,
 	'mass': 0,
 }];
+rashid
 class GUI {
     constructor(t) {
         this.socket = t, this.player = this.socket.player, this.body = document.getElementsByTagName("body")[0], this.divs = {
@@ -616,56 +617,178 @@ class MoreBotsHotkeys {
 }
 class AgarBot {
     constructor(t) {
-        this.ip = "", this.ws = null, this.player = {
-            isPremium: !1,
+        this.ip = "";
+        this.ws = null;
+        this.player = {
+            isPremium: false,
             PremiumType: 0,
-            PureFeeder: !1,
+            PureFeeder: false,
             startTime: Date.now(),
             decoded: {},
-            initialized: !1,
-        }, this.GUI = new GUI(this), this.Reader = new Reader(this), this.Transmitter = new Transmitter(this), this.Hotkeys = new MoreBotsHotkeys(this), this.get = function(t, e) {
-            let s = new XMLHttpRequest;
-            s.open("GET", t), s.send(), s.onload = function() {
-                200 != s.status ? lert("Response failed") : e(s.responseText)
-            }, s.onerror = function() {
-                alert("Request failed")
-            }
-        },
-		this.connect("wss://gamesrv.agarbot.ovh:8443");
+            initialized: false,
+        };
+        this.GUI = new GUI(this);
+        this.Reader = new Reader(this);
+        this.Transmitter = new Transmitter(this);
+        this.Hotkeys = new MoreBotsHotkeys(this);
+        this.get = function(t, e) {
+            let s = new XMLHttpRequest();
+            s.open("GET", t);
+            s.send();
+            s.onload = function() {
+                if (s.status != 200) {
+                    alert("Response failed");
+                } else {
+                    e(s.responseText);
+                }
+            };
+            s.onerror = function() {
+                alert("Request failed");
+            };
+        };
+        this.connect("wss://gamesrv.agarbot.ovh:8443");
+        this.initializeGUI();
     }
+
     connect(t) {
-        this.ip = "wss://gamesrv.agarbot.ovh:2083", this.ws = new WebSocket(this.ip), this.ws.onopen = () => this.onopen(), this.ws.onmessage = t => this.Reader.read(t), this.ws.onerror = () => console.log("[AGARBOT] Error while connecting!"), this.ws.onclose = () => {console.log("[AGARBOT] Closed the connessione!");window.playingtime = false;clearInterval(window.expireTimeInt);}
+        this.ip = "wss://gamesrv.agarbot.ovh:2083";
+        this.ws = new WebSocket(this.ip);
+        this.ws.onopen = () => this.onopen();
+        this.ws.onmessage = t => this.Reader.read(t);
+        this.ws.onerror = () => console.log("[AGARBOT] Error while connecting!");
+        this.ws.onclose = () => {
+            console.log("[AGARBOT] Closed the connection!");
+            window.playingtime = false;
+            clearInterval(window.expireTimeInt);
+        };
+        this.isReadyToSpawn = false;
     }
+
+    setReadyToSpawn(ready) {
+        this.isReadyToSpawn = ready;
+    }
+
     onopen() {
-		window.sliderValue = undefined;
-        console.log("[AGARBOT] Authenticating to the server!"), this.Transmitter.handshake("220720", "Delta")
+        window.sliderValue = undefined;
+        console.log("[AGARBOT] Authenticating to the server!");
+        this.Transmitter.handshake("220720", "Delta");
     }
+
     send(t) {
-        this.ws && this.ip && 1 === this.ws.readyState && this.ws.send(JSON.stringify(t))
+        this.ws && this.ip && this.ws.readyState === 1 && this.ws.send(JSON.stringify(t));
     }
+
     reset() {
         this.player = {
-            isPremium: !1,
+            isPremium: false,
             PremiumType: 0,
-            PureFeeder: !1,
+            PureFeeder: false,
             startTime: Date.now(),
             decoded: {
                 currentBots: 0
             },
-            initialized: !1
-        }, this.Transmitter.status = {
-            initialized: !1,
+            initialized: false
+        };
+        this.Transmitter.status = {
+            initialized: false,
             vshield: 0,
-			botspec: 0,
-			massbots: 0,
+            botspec: 0,
+            massbots: 0,
             botmode: 0,
             botdestination: 0
-        }
+        };
     }
+
     change(serv) {
-		// window.CurrentServerPlaying = null;
-		console.log('CHANGE SERVER');
-		window.currentServer = serv;
+        console.log('CHANGE SERVER');
+        window.currentServer = serv;
+        if (!this.isReadyToSpawn) {
+            console.log("[AGARBOT] Not ready to spawn bots yet.");
+            return;
+        }
+        // Existing logic for handling server change...
+    }
+
+    initializeGUI() {
+        const botManagementHTML = `
+            <div id="bot-management">
+                <button id="start-bots">Start Bots</button>
+                <button id="stop-bots">Stop Bots</button>
+                <div>
+                    <label for="bot-speed">Speed:</label>
+                    <input type="number" id="bot-speed" min="1" max="10" value="5">
+                </div>
+                <div>
+                    <label for="bot-mode">Mode:</label>
+                    <select id="bot-mode">
+                        <option value="1">Mode 1</option>
+                        <option value="2">Mode 2</option>
+                    </select>
+                </div>
+                <button id="configure-bots">Configure Bots</button>
+            </div>
+        `;
+
+        // Inject HTML
+        document.body.insertAdjacentHTML('beforeend', botManagementHTML);
+
+        // Apply CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            #bot-management {
+                position: fixed;
+                bottom: 10px;
+                right: 10px;
+                width: 300px;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 10px;
+                border-radius: 5px;
+                color: white;
+            }
+            #bot-management button {
+                width: 100%;
+                margin-bottom: 10px;
+                padding: 10px;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+            #bot-management label {
+                margin-bottom: 5px;
+            }
+            #bot-management input, #bot-management select {
+                width: 100%;
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Add event listeners for GUI controls
+        document.getElementById('start-bots').addEventListener('click', () => this.startBots());
+        document.getElementById('stop-bots').addEventListener('click', () => this.stopBots());
+        document.getElementById('configure-bots').addEventListener('click', () => this.showConfigurationOptions());
+    }
+
+    startBots() {
+        // Logic to start bots
+        this.send({ action: 'start_bots' });
+    }
+
+    stopBots() {
+        // Logic to stop bots
+        this.send({ action: 'stop_bots' });
+    }
+
+    showConfigurationOptions() {
+        // Display and handle bot configuration options
+        const speed = document.getElementById('bot-speed').value;
+        const mode = document.getElementById('bot-mode').value;
+        this.send({ action: 'configure_bots', speed, mode });
+    }
+}
 		var gamePkt = {}; 
 						gamePkt.coords = {mouse: {}, fence: {}, cell: {}, mod: 0};
 						// console.log(this.status);
@@ -756,5 +879,4 @@ setTimeout(()=>{
 	console.log('No conflic ext detected');
 	clearInterval(IntCheckext);
 },10000);
-
 
